@@ -34,6 +34,10 @@ namespace TeamPointPvP
             }
         }
 
+        private int minx;
+        private int maxx;
+        private int miny;
+        private int maxy;
         #region Initialize/Dispose
         public override void Initialize()
         {
@@ -41,6 +45,8 @@ namespace TeamPointPvP
             ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
             ServerApi.Hooks.ServerChat.Register(this, OnChat);
+
+            ServerApi.Hooks.GameUpdate.Register(this, OnGameUpdate);
         }
 
         protected override void Dispose(bool disposing)
@@ -56,6 +62,35 @@ namespace TeamPointPvP
         }
         #endregion
 
+        //Coundnt find OnWorldLoaded hook
+        private bool tileChecked = false;
+        private void OnGameUpdate (EventArgs args)
+        {
+            if (!tileChecked)
+            {
+                minx = Main.maxTilesX;
+                maxx = 0;
+                miny = Main.maxTilesY;
+                maxy = 0;
+                for (int i = 0; i < Main.maxTilesX; i++)
+                {
+                    for (int j = 0; j < Main.maxTilesY; j++)
+                    {
+                        //90 = 18 x 5(placeStyle), NXOR LogicGate
+                        if (Main.tile[i, j] != null && Main.tile[i, j].type == TileID.LogicGate && Main.tile[i, j].frameY == 90 && Main.tile[i, j].active())
+                        {
+                            if (i > maxx) maxx = i;
+                            if (i < minx) minx = i;
+                            if (j > maxy) maxy = j;
+                            if (j < miny) miny = j;
+                        }
+                    }
+                }
+                ServerApi.LogWriter.PluginWriteLine(this, "battlefield: minx:" + minx + " maxx:" + maxx + " miny:" + miny + " maxy:" + maxy, System.Diagnostics.TraceLevel.Info);
+                tileChecked = true;
+            }
+        }
+
         private void OnLeave(LeaveEventArgs args)
         {
             PlayerClass[args.Who] = -1;
@@ -69,7 +104,25 @@ namespace TeamPointPvP
                 //NetMessage.BroadcastChatMessage(NetworkText.FromLiteral("index = " + playerIndex + " class : " + PlayerClass[playerIndex]), Color.White);
                 if (PlayerClass[playerIndex] != -1)
                 {
-                    SetBuffs(ClassName[PlayerClass[playerIndex]], playerIndex); 
+                    SetBuffs(ClassName[PlayerClass[playerIndex]], playerIndex);
+                    bool isSSC = Main.ServerSideCharacter;
+
+                    if (!isSSC)
+                    {
+                        Main.ServerSideCharacter = true;
+                        NetMessage.SendData(7, playerIndex, -1, null, 0, 0f, 0f, 0f, 0, 0, 0); // Import from ChangeStat plugin, Is this really need?
+                        TShock.Players[playerIndex].IgnoreSSCPackets = true;
+                    }
+
+                    TShock.Players[playerIndex].TPlayer.statLife = TShock.Players[playerIndex].TPlayer.statLifeMax;
+                    NetMessage.SendData(16, playerIndex, -1, null, playerIndex, 0f, 0f, 0f, 0, 0, 0);
+
+                    if (!isSSC)
+                    {
+                        Main.ServerSideCharacter = false;
+                        NetMessage.SendData(7, playerIndex, -1, null, 0, 0.0f, 0.0f, 0.0f, 0, 0, 0); // Send world info
+                        TShock.Players[playerIndex].IgnoreSSCPackets = false;
+                    }
                 }
             }
         }
@@ -102,6 +155,8 @@ namespace TeamPointPvP
                         TShock.Players[playerIndex].SetBuff(BuffID.Regeneration, 216000);
                         TShock.Players[playerIndex].SetBuff(BuffID.Slow, 216000);
                         TShock.Players[playerIndex].SetBuff(BuffID.Chilled, 216000);
+                        TShock.Players[playerIndex].SetBuff(BuffID.BrokenArmor, 216000);
+                        TShock.Players[playerIndex].SetBuff(BuffID.Ichor, 216000);
                         return true;
                     }
                 case "ninja":
@@ -116,14 +171,19 @@ namespace TeamPointPvP
                     }
                 case "wizard":
                     {
+                        TShock.Players[playerIndex].SetBuff(BuffID.MagicPower, 216000);
                         return true;
                     }
                 case "frost":
                     {
+                        TShock.Players[playerIndex].SetBuff(BuffID.MagicPower, 216000);
                         return true;
                     }
                 case "summon":
                     {
+                        TShock.Players[playerIndex].SetBuff(BuffID.WellFed, 216000);
+                        TShock.Players[playerIndex].SetBuff(BuffID.Wrath, 216000);
+                        TShock.Players[playerIndex].SetBuff(BuffID.Ironskin, 216000);
                         return true;
                     }
                 default:
@@ -142,7 +202,7 @@ namespace TeamPointPvP
             Player player = args.TPlayer;
             string classSelectErrorMsg = "Invalid class name! Usage: " + TShock.Config.CommandSpecifier + "change <className>\nClass List: " + string.Join(", ", ClassName);
 
-            if (!(1975 < player.Center.X / 16f && player.Center.X / 16f < 2220 && 650 < player.Center.Y / 16f && player.Center.Y / 16f < 760)) //TODO: Use config, or Automaticary set from world info
+            if (!(minx < player.Center.X / 16f && player.Center.X / 16f < maxx && miny < player.Center.Y / 16f && player.Center.Y / 16f < maxy)) //TODO: Use config, or Automaticary set from world info
             {
                 #region ResetAndSetInventory
 
@@ -366,7 +426,7 @@ namespace TeamPointPvP
                     case "creeper":
                         {
                             player.inventory[0].SetDefaults(ItemID.IceBow);
-                            player.inventory[0].prefix = PrefixID.Ruthless;
+                            player.inventory[0].prefix = PrefixID.Hurtful;
                             player.inventory[1].SetDefaults(ItemID.Musket);
                             player.inventory[2].SetDefaults(ItemID.EndlessQuiver);
 
@@ -375,7 +435,7 @@ namespace TeamPointPvP
                             player.inventory[4].SetDefaults(ItemID.MeteorShot);
                             player.inventory[4].stack = 999;
 
-                            //player.armor[1].SetDefaults(ItemID.SquireAltShirt);
+                            player.armor[1].SetDefaults(ItemID.SquireAltShirt);
                             player.armor[10].SetDefaults(ItemID.CreeperMask);
                             player.armor[11].SetDefaults(ItemID.CreeperShirt);
                             player.armor[12].SetDefaults(ItemID.CreeperPants);
@@ -384,11 +444,12 @@ namespace TeamPointPvP
                             player.armor[3].prefix = PrefixID.Menacing;
                             player.armor[4].SetDefaults(ItemID.TsunamiInABottle);
                             player.armor[4].prefix = PrefixID.Menacing;
-                            player.armor[5].SetDefaults(ItemID.PaladinsShield);
+                            player.armor[5].SetDefaults(ItemID.CobaltShield);
                             player.armor[5].prefix = PrefixID.Menacing;
                             player.armor[6].SetDefaults(ItemID.ShinyStone);
                             player.armor[6].prefix = PrefixID.Menacing;
                             player.armor[7].SetDefaults(ItemID.BandofRegeneration);
+                            player.armor[8].SetDefaults(ItemID.CharmofMyths);
 
                             for (int i = 0; i < player.dye.Length; i++)
                             {
@@ -428,98 +489,10 @@ namespace TeamPointPvP
                             player.armor[4].SetDefaults(ItemID.TsunamiInABottle);
                             player.armor[5].SetDefaults(ItemID.GravityGlobe);
 
-                            player.inventory[6].SetDefaults(ItemID.CursedDart);
-                            player.inventory[6].stack = 999;
-                            player.inventory[7].SetDefaults(ItemID.CursedDart);
-                            player.inventory[7].stack = 999;
-
-                            for (int i = 0; i < player.dye.Length; i++)
-                            {
-                                player.dye[i].SetDefaults(ItemID.TeamDye);
-                            }
-                            for (int i = 0; i < player.miscDyes.Length; i++)
-                            {
-                                player.miscDyes[i].SetDefaults(ItemID.TeamDye);
-                            }
-
-                            player.miscEquips[1].SetDefaults(ItemID.SuspiciousLookingTentacle);
-                            player.armor[13].SetDefaults(ItemID.PartyBundleOfBalloonsAccessory);
-                            player.inventory[5].SetDefaults(ItemID.MagicMirror);
-
-                            player.statLifeMax = 140;
-                            player.statManaMax = 20;
-
-                            break;
-                        }
-                    case "desert":
-                        {
-                            player.inventory[0].SetDefaults(ItemID.OnyxBlaster);
-                            player.inventory[1].SetDefaults(ItemID.SkyFracture);
-                            player.inventory[1].prefix = PrefixID.Ruthless;
-                            player.inventory[2].SetDefaults(ItemID.SpiritFlame);
-                            player.inventory[2].prefix = PrefixID.Intense;
-                            player.inventory[3].SetDefaults(ItemID.EndlessMusketPouch);
-
-                            player.armor[0].SetDefaults(ItemID.MythrilHood);
-                            player.armor[1].SetDefaults(ItemID.TikiShirt);
-                            player.armor[2].SetDefaults(ItemID.SpectrePants);
-                            player.armor[10].SetDefaults(ItemID.AncientArmorHat);
-                            player.armor[11].SetDefaults(ItemID.AncientArmorShirt);
-                            player.armor[12].SetDefaults(ItemID.AncientArmorPants);
-
-                            player.armor[3].SetDefaults(ItemID.LuckyHorseshoe);
-                            player.armor[3].prefix = PrefixID.Menacing;
-                            player.armor[4].SetDefaults(ItemID.SandstorminaBottle);
-                            player.armor[4].prefix = PrefixID.Menacing;
-                            player.armor[5].SetDefaults(ItemID.FlyingCarpet);
-                            player.armor[5].prefix = PrefixID.Arcane;
-                            player.armor[6].SetDefaults(ItemID.AvengerEmblem);
-                            player.armor[6].prefix = PrefixID.Arcane;
-                            player.armor[7].SetDefaults(ItemID.SorcererEmblem);
-                            player.armor[7].prefix = PrefixID.Arcane;
-
-                            for (int i = 0; i < player.dye.Length; i++)
-                            {
-                                player.dye[i].SetDefaults(ItemID.TeamDye);
-                            }
-                            for (int i = 0; i < player.miscDyes.Length; i++)
-                            {
-                                player.miscDyes[i].SetDefaults(ItemID.TeamDye);
-                            }
-
-                            player.miscEquips[1].SetDefaults(ItemID.SuspiciousLookingTentacle);
-                            player.armor[13].SetDefaults(ItemID.PartyBundleOfBalloonsAccessory);
-                            player.inventory[4].SetDefaults(ItemID.MagicMirror);
-
-                            player.statLifeMax = 240;
-                            player.statManaMax = 20;
-                            break;
-                        }
-                    case "wizard":
-                        {
-                            player.inventory[0].SetDefaults(ItemID.UnholyTrident);
-                            player.inventory[0].prefix = PrefixID.Ruthless;
-                            player.inventory[1].SetDefaults(ItemID.ToxicFlask);
-                            player.inventory[1].prefix = PrefixID.Ignorant;
-                            player.inventory[2].SetDefaults(ItemID.Flamelash);
-                            player.inventory[2].prefix = PrefixID.Broken;
-
-                            player.armor[0].SetDefaults(ItemID.MythrilHood);
-                            player.armor[1].SetDefaults(ItemID.GypsyRobe);
-                            player.armor[2].SetDefaults(ItemID.MeteorLeggings);
-                            player.armor[10].SetDefaults(ItemID.WizardHat);
-                            player.armor[11].SetDefaults(ItemID.Robe);
-
-                            player.armor[3].SetDefaults(ItemID.LuckyHorseshoe);
-                            player.armor[3].prefix = PrefixID.Menacing;
-                            player.armor[4].SetDefaults(ItemID.CloudinaBottle);
-                            player.armor[4].prefix = PrefixID.Menacing;
-                            player.armor[5].SetDefaults(ItemID.SorcererEmblem);
-                            player.armor[5].prefix = PrefixID.Menacing;
-                            player.armor[6].SetDefaults(ItemID.CelestialEmblem);
-                            player.armor[6].prefix = PrefixID.Menacing;
-                            player.armor[7].SetDefaults(ItemID.MagicCuffs);
-                            player.armor[7].prefix = PrefixID.Menacing;
+                            player.inventory[4].SetDefaults(ItemID.CursedDart);
+                            player.inventory[4].stack = 999;
+                            player.inventory[5].SetDefaults(ItemID.CursedDart);
+                            player.inventory[5].stack = 999;
 
                             for (int i = 0; i < player.dye.Length; i++)
                             {
@@ -534,7 +507,95 @@ namespace TeamPointPvP
                             player.armor[13].SetDefaults(ItemID.PartyBundleOfBalloonsAccessory);
                             player.inventory[3].SetDefaults(ItemID.MagicMirror);
 
-                            player.statLifeMax = 200;
+                            player.statLifeMax = 140;
+                            player.statManaMax = 20;
+
+                            break;
+                        }
+                    case "desert":
+                        {
+                            player.inventory[0].SetDefaults(ItemID.OnyxBlaster);
+                            player.inventory[0].prefix = PrefixID.Ruthless;
+                            player.inventory[1].SetDefaults(ItemID.SkyFracture);
+                            player.inventory[1].prefix = PrefixID.Ruthless;
+                            player.inventory[2].SetDefaults(ItemID.SpiritFlame);
+                            player.inventory[2].prefix = PrefixID.Inept;
+                            player.inventory[3].SetDefaults(ItemID.EndlessMusketPouch);
+
+                            player.armor[0].SetDefaults(ItemID.TitaniumHeadgear);
+                            player.armor[1].SetDefaults(ItemID.ApprenticeRobe);
+                            player.armor[2].SetDefaults(ItemID.NebulaLeggings);
+                            player.armor[10].SetDefaults(ItemID.AncientArmorHat);
+                            player.armor[11].SetDefaults(ItemID.AncientArmorShirt);
+                            player.armor[12].SetDefaults(ItemID.AncientArmorPants);
+
+                            player.armor[3].SetDefaults(ItemID.LuckyHorseshoe);
+                            player.armor[3].prefix = PrefixID.Menacing;
+                            player.armor[4].SetDefaults(ItemID.SandstorminaBottle);
+                            player.armor[4].prefix = PrefixID.Menacing;
+                            player.armor[5].SetDefaults(ItemID.FlyingCarpet);
+                            player.armor[5].prefix = PrefixID.Menacing;
+                            player.armor[6].SetDefaults(ItemID.AvengerEmblem);
+                            player.armor[6].prefix = PrefixID.Menacing;
+                            player.armor[7].SetDefaults(ItemID.SorcererEmblem);
+                            player.armor[7].prefix = PrefixID.Menacing;
+                            player.armor[8].SetDefaults(ItemID.DestroyerEmblem);
+                            player.armor[8].prefix = PrefixID.Arcane;
+
+                            for (int i = 0; i < player.dye.Length; i++)
+                            {
+                                player.dye[i].SetDefaults(ItemID.TeamDye);
+                            }
+                            for (int i = 0; i < player.miscDyes.Length; i++)
+                            {
+                                player.miscDyes[i].SetDefaults(ItemID.TeamDye);
+                            }
+
+                            player.miscEquips[1].SetDefaults(ItemID.SuspiciousLookingTentacle);
+                            player.armor[13].SetDefaults(ItemID.PartyBundleOfBalloonsAccessory);
+                            player.inventory[4].SetDefaults(ItemID.MagicMirror);
+
+                            player.statLifeMax = 180;
+                            player.statManaMax = 20;
+                            break;
+                        }
+                    case "wizard":
+                        {
+                            player.inventory[0].SetDefaults(ItemID.UnholyTrident);
+                            player.inventory[0].prefix = PrefixID.Ruthless;
+                            player.inventory[1].SetDefaults(ItemID.ToxicFlask);
+                            player.inventory[1].prefix = PrefixID.Broken;
+                            player.inventory[2].SetDefaults(ItemID.Flamelash);
+                            player.inventory[2].prefix = PrefixID.Broken;
+
+                            player.armor[0].SetDefaults(ItemID.TitaniumHeadgear);
+                            player.armor[1].SetDefaults(ItemID.MeteorSuit);
+                            player.armor[2].SetDefaults(ItemID.MeteorLeggings);
+                            player.armor[10].SetDefaults(ItemID.WizardHat);
+                            player.armor[11].SetDefaults(ItemID.Robe);
+
+                            player.armor[3].SetDefaults(ItemID.LuckyHorseshoe);
+                            player.armor[3].prefix = PrefixID.Menacing;
+                            player.armor[4].SetDefaults(ItemID.CloudinaBottle);
+                            player.armor[4].prefix = PrefixID.Menacing;
+                            player.armor[5].SetDefaults(ItemID.SorcererEmblem);
+                            player.armor[6].SetDefaults(ItemID.DestroyerEmblem);
+                            player.armor[7].SetDefaults(ItemID.MagicCuffs);
+
+                            for (int i = 0; i < player.dye.Length; i++)
+                            {
+                                player.dye[i].SetDefaults(ItemID.TeamDye);
+                            }
+                            for (int i = 0; i < player.miscDyes.Length; i++)
+                            {
+                                player.miscDyes[i].SetDefaults(ItemID.TeamDye);
+                            }
+
+                            player.miscEquips[1].SetDefaults(ItemID.SuspiciousLookingTentacle);
+                            player.armor[13].SetDefaults(ItemID.PartyBundleOfBalloonsAccessory);
+                            player.inventory[3].SetDefaults(ItemID.MagicMirror);
+
+                            player.statLifeMax = 180;
                             player.statManaMax = 20;
                             break;
                         }
@@ -543,9 +604,9 @@ namespace TeamPointPvP
                             player.inventory[0].SetDefaults(ItemID.IceSickle);
                             player.inventory[0].prefix = PrefixID.Ruthless;
                             player.inventory[1].SetDefaults(ItemID.FlowerofFrost);
-                            player.inventory[1].prefix = PrefixID.Furious;
+                            player.inventory[1].prefix = PrefixID.Intense;
                             player.inventory[2].SetDefaults(ItemID.Amarok);
-                            player.inventory[2].prefix = PrefixID.Broken;
+                            player.inventory[2].prefix = PrefixID.Damaged;
 
                             player.armor[0].SetDefaults(ItemID.FrostHelmet);
                             player.armor[1].SetDefaults(ItemID.FrostBreastplate);
@@ -557,7 +618,7 @@ namespace TeamPointPvP
                             player.armor[4].prefix = PrefixID.Arcane;
                             player.armor[5].SetDefaults(ItemID.WarriorEmblem);
                             player.armor[5].prefix = PrefixID.Arcane;
-                            player.armor[6].SetDefaults(ItemID.AvengerEmblem);
+                            player.armor[6].SetDefaults(ItemID.WhiteString);
                             player.armor[6].prefix = PrefixID.Arcane;
                             player.armor[7].SetDefaults(ItemID.MechanicalGlove);
                             player.armor[7].prefix = PrefixID.Arcane;
@@ -577,38 +638,60 @@ namespace TeamPointPvP
                             player.armor[13].SetDefaults(ItemID.PartyBundleOfBalloonsAccessory);
                             player.inventory[3].SetDefaults(ItemID.MagicMirror);
 
-                            player.statLifeMax = 200;
+                            player.statLifeMax = 240;
                             player.statManaMax = 20;
                             break;
                         }
                     case "summon":
                         {
-                            player.inventory[0].SetDefaults(ItemID.TempestStaff);
-                            player.inventory[0].prefix = PrefixID.Ruthless;
-                            if (player.team == 3)
+                            if(player.team == 3)
                             {
-                                player.inventory[1].SetDefaults(ItemID.DD2FlameburstTowerT2Popper);
-                                player.inventory[1].prefix = PrefixID.Hurtful;
+                                player.inventory[0].SetDefaults(ItemID.TempestStaff);
+                                player.inventory[0].prefix = PrefixID.Shoddy;
+                                player.inventory[1].SetDefaults(ItemID.DD2BallistraTowerT1Popper);
+                                player.inventory[1].prefix = PrefixID.Demonic;
 
-                                player.armor[3].SetDefaults(ItemID.CloudinaBottle);
-                                player.armor[3].prefix = PrefixID.Angry;
+                                player.armor[0].SetDefaults(ItemID.ApprenticeHat);
+                                player.armor[1].SetDefaults(ItemID.ApprenticeRobe);
+                                player.armor[2].SetDefaults(ItemID.ApprenticeTrousers);
+
+                                player.armor[3].SetDefaults(ItemID.LuckyHorseshoe);
+                                player.armor[3].prefix = PrefixID.Menacing;
+                                player.armor[4].SetDefaults(ItemID.CloudinaBottle);
+                                player.armor[4].prefix = PrefixID.Menacing;
+                                player.armor[5].SetDefaults(ItemID.SummonerEmblem);
+                                player.armor[5].prefix = PrefixID.Menacing;
+                                player.armor[6].SetDefaults(ItemID.AvengerEmblem);
+                                player.armor[6].prefix = PrefixID.Menacing;
+                                player.armor[7].SetDefaults(ItemID.DestroyerEmblem);
+                                player.armor[7].prefix = PrefixID.Menacing;
+                                player.armor[8].SetDefaults(ItemID.MagicCuffs);
+                                player.armor[8].prefix = PrefixID.Menacing;
                             }
                             else if (player.team == 4)
                             {
-                                player.inventory[1].SetDefaults(ItemID.DD2BallistraTowerT2Popper);
-                                player.inventory[1].prefix = PrefixID.Broken;
+                                player.inventory[0].SetDefaults(ItemID.TempestStaff);
+                                player.inventory[0].prefix = PrefixID.Shoddy;
+                                player.inventory[1].SetDefaults(ItemID.QueenSpiderStaff);
+                                player.inventory[1].prefix = PrefixID.Ruthless;
 
-                                player.armor[3].SetDefaults(ItemID.CloudinaBottle);
-                                player.armor[3].prefix = PrefixID.Spiked;
+                                player.armor[0].SetDefaults(ItemID.ApprenticeHat);
+                                player.armor[1].SetDefaults(ItemID.ApprenticeRobe);
+                                player.armor[2].SetDefaults(ItemID.ApprenticeTrousers);
+
+                                player.armor[3].SetDefaults(ItemID.LuckyHorseshoe);
+                                player.armor[3].prefix = PrefixID.Menacing;
+                                player.armor[4].SetDefaults(ItemID.CloudinaBottle);
+                                player.armor[4].prefix = PrefixID.Menacing;
+                                player.armor[5].SetDefaults(ItemID.SummonerEmblem);
+                                player.armor[5].prefix = PrefixID.Menacing;
+                                player.armor[6].SetDefaults(ItemID.AvengerEmblem);
+                                player.armor[6].prefix = PrefixID.Menacing;
+                                player.armor[7].SetDefaults(ItemID.DestroyerEmblem);
+                                player.armor[7].prefix = PrefixID.Menacing;
+                                player.armor[8].SetDefaults(ItemID.MagicCuffs);
+                                player.armor[8].prefix = PrefixID.Menacing;
                             }
-                            player.armor[0].SetDefaults(ItemID.ApprenticeHat);
-                            player.armor[1].SetDefaults(ItemID.ApprenticeRobe);
-                            player.armor[2].SetDefaults(ItemID.ApprenticeTrousers);
-
-                            player.armor[4].SetDefaults(ItemID.LuckyHorseshoe);
-                            player.armor[4].prefix = PrefixID.Menacing;
-                            player.armor[5].SetDefaults(ItemID.MagicCuffs);
-                            player.armor[5].prefix = PrefixID.Arcane;
 
                             for (int i = 0; i < player.dye.Length; i++)
                             {
@@ -623,7 +706,7 @@ namespace TeamPointPvP
                             player.armor[13].SetDefaults(ItemID.PartyBundleOfBalloonsAccessory);
                             player.inventory[2].SetDefaults(ItemID.MagicMirror);
 
-                            player.statLifeMax = 200;
+                            player.statLifeMax = 180;
                             player.statManaMax = 20;
                             break;
                         }
@@ -711,7 +794,7 @@ namespace TeamPointPvP
             }
             else
             {
-                args.Player.SendErrorMessage("Stay close to your spawn to change class.");
+                args.Player.SendErrorMessage("You can\'t change class in the battlefield.");
             }
         }
 
