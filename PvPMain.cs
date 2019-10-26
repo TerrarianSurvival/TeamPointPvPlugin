@@ -8,10 +8,12 @@ using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using Terraria;
+using Terraria.DataStructures;
 using Terraria.ID;
 using Terraria.Localization;
 using TerrariaApi.Server;
 using TShockAPI;
+using TShockAPI.Hooks;
 
 namespace TeamPointPvP
 {
@@ -23,18 +25,19 @@ namespace TeamPointPvP
         public override string Name => "TeamPointPvP";
         public override Version Version => Assembly.GetExecutingAssembly().GetName().Version;
 
-        private int[] PlayerClass = new int[256];
+        private readonly int[] PlayerClass = new int[256];
 
         private PvPConfig config;
+        private readonly string PVP_CONFIG_PATH;
 
         public PvPMain(Main game) : base(game)
         {
+            PVP_CONFIG_PATH = Path.Combine(TShock.SavePath, "PvP_config.json");
+            config = PvPConfig.Read(PVP_CONFIG_PATH);
 
-            config = PvPConfig.Read(Path.Combine(TShock.SavePath, "PvP_config.json"));
-            //Console.WriteLine(JsonConvert.SerializeObject(config, Formatting.Indented, new JsonSerializerSettings { DefaultValueHandling = DefaultValueHandling.Ignore }));
             if (config == null)
             {
-                Console.WriteLine("Config is Null");
+                Console.WriteLine("Config is NULL.");
                 config = new PvPConfig();
             }
 
@@ -45,10 +48,6 @@ namespace TeamPointPvP
             }
         }
 
-        private int minx;
-        private int maxx;
-        private int miny;
-        private int maxy;
         #region Initialize/Dispose
         public override void Initialize()
         {
@@ -56,8 +55,7 @@ namespace TeamPointPvP
             ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
             ServerApi.Hooks.ServerChat.Register(this, OnChat);
-
-            ServerApi.Hooks.GameUpdate.Register(this, OnGameUpdate);
+            GeneralHooks.ReloadEvent += OnReload;
         }
 
         protected override void Dispose(bool disposing)
@@ -68,55 +66,64 @@ namespace TeamPointPvP
                 ServerApi.Hooks.ServerLeave.Deregister(this, OnLeave);
                 ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
                 ServerApi.Hooks.ServerChat.Deregister(this, OnChat);
+                GeneralHooks.ReloadEvent -= OnReload;
             }
             base.Dispose(disposing);
         }
         #endregion
 
-        //Coundnot find OnWorldLoaded hook
-        private bool tileChecked = false;
-        private int[,] stageData = { { 3754, 381, 4008, 490 }, { 3661, 539, 4005, 634 }, { 3727, 1036, 4008, 1133 } };
+        //Couldn't find OnWorldLoaded hook
+        private bool mapChecked = false;
+        private List<PvPMap.Area> currentBlacklist = null;
+        private List<PvPMap.Area> currentWhitelist = null;
         private bool IsInStage (float playerX, float playerY)
         {
-            int stageLen = stageData.GetLength(0);
-            playerX = playerX / 16f;
-            playerY = playerY / 16f;
-
-            for (int i = 0; i < stageLen; i++)
+            if (!mapChecked)
             {
-                if (stageData[i, 0] < playerX && playerX < stageData[i, 2] &&
-                    stageData[i, 1] < playerY && playerY < stageData[i, 3])
+                foreach (var map in config.maps)
+                {
+                    if (Main.worldName.Contains(map.name))
+                    {
+                        currentBlacklist = map.blacklist;
+                        currentWhitelist = map.whitelist;
+                        break;
+                    }
+                }
+                mapChecked = true;
+            }
+
+            playerX /= 16f;
+            playerY /= 16f;
+
+            foreach (var area in currentWhitelist)
+            {
+                if (area.ContainsPoint(playerX, playerY))
+                {
+                    return false;
+                }
+            }
+
+            foreach (var area in currentBlacklist)
+            {
+                if (area.ContainsPoint(playerX, playerY))
                 {
                     return true;
                 }
             }
             return false;
         }
-        private void OnGameUpdate (EventArgs args)
+
+        private void OnReload(ReloadEventArgs e)
         {
-            if (!tileChecked && false)
+            try
             {
-                /* NOREACH */
-                minx = Main.maxTilesX;
-                maxx = 0;
-                miny = Main.maxTilesY;
-                maxy = 0;
-                for (int i = 0; i < Main.maxTilesX; i++)
-                {
-                    for (int j = 0; j < Main.maxTilesY; j++)
-                    {
-                        //90 = 18 x 5(placeStyle), NXOR LogicGate
-                        if (Main.tile[i, j] != null && Main.tile[i, j].type == TileID.LogicGate && Main.tile[i, j].frameY == 90 && Main.tile[i, j].active())
-                        {
-                            if (i > maxx) maxx = i;
-                            if (i < minx) minx = i;
-                            if (j > maxy) maxy = j;
-                            if (j < miny) miny = j;
-                        }
-                    }
-                }
-                ServerApi.LogWriter.PluginWriteLine(this, "battlefield: minx:" + minx + " maxx:" + maxx + " miny:" + miny + " maxy:" + maxy, System.Diagnostics.TraceLevel.Info);
-                tileChecked = true;
+                config = PvPConfig.Read(PVP_CONFIG_PATH);
+            }
+            catch (Exception ex)
+            {
+                e.Player.SendErrorMessage(
+                    "An error occurred while reloading TeamPointPvP configuration. Check server logs for details.");
+                TShock.Log.Error(ex.Message);
             }
         }
 
@@ -127,49 +134,53 @@ namespace TeamPointPvP
 
         private void OnGetData(GetDataEventArgs args)
         {
-            if (args.MsgID == PacketTypes.PlayerSpawn)
+            switch (args.MsgID)
             {
-                int playerIndex = args.Msg.whoAmI;
-                //NetMessage.BroadcastChatMessage(NetworkText.FromLiteral("index = " + playerIndex + " class : " + PlayerClass[playerIndex]), Color.White);
-                if (PlayerClass[playerIndex] != -1)
-                {
-                    SetBuffs(PlayerClass[playerIndex], playerIndex);
-
-                    TShock.Players[playerIndex].Heal(TShock.Players[playerIndex].TPlayer.statLifeMax);
-                    /*
-                    bool isSSC = Main.ServerSideCharacter;
-
-                    if (!isSSC)
+                case PacketTypes.PlayerSpawn:
+                case PacketTypes.PlayerSpawnSelf:
+                    int playerIndex = args.Msg.whoAmI;
+                    if (PlayerClass[playerIndex] != -1)
                     {
-                        Main.ServerSideCharacter = true;
-                        NetMessage.SendData(7, playerIndex, -1, null, 0, 0f, 0f, 0f, 0, 0, 0); // Import from ChangeStat plugin, Is this really need?
-                        TShock.Players[playerIndex].IgnoreSSCPackets = true;
+                        SetBuffs(PlayerClass[playerIndex], playerIndex);
+
+                        TShock.Players[playerIndex].Heal(TShock.Players[playerIndex].TPlayer.statLifeMax);
                     }
-
-                    TShock.Players[playerIndex].TPlayer.statLife = TShock.Players[playerIndex].TPlayer.statLifeMax;
-                    NetMessage.SendData(16, playerIndex, -1, null, playerIndex, 0f, 0f, 0f, 0, 0, 0);
-
-                    if (!isSSC)
+                    break;
+                case PacketTypes.PlayerDeathV2:
+                    if (args.Handled)
                     {
-                        Main.ServerSideCharacter = false;
-                        NetMessage.SendData(7, playerIndex, -1, null, 0, 0.0f, 0.0f, 0.0f, 0, 0, 0); // Send world info
-                        TShock.Players[playerIndex].IgnoreSSCPackets = false;
+                        return;
                     }
-                    */
-                }
+                    int index = args.Msg.reader.ReadByte();
+                    if (Main.netMode == 2)
+                    {
+                        index = args.Index;
+                    }
+                    PlayerDeathReason playerDeathReason = PlayerDeathReason.FromReader(args.Msg.reader);
+                    int damage = args.Msg.reader.ReadInt16();
+                    int hitDirection = args.Msg.reader.ReadByte() - 1;
+                    bool pvp = ((BitsByte)args.Msg.reader.ReadByte())[0];
+                    Main.player[index].KillMe(playerDeathReason, damage, hitDirection, pvp);
+                    if (Main.netMode == 2)
+                    {
+                        NetMessage.SendPlayerDeath(index, playerDeathReason, damage, hitDirection, pvp, -1, args.Index);
+                    }
+                    args.Handled = true;
+                    break;
             }
         }
 
         private bool SetBuffs (int class_id, int player_index)
         {
-            if (config.classes.Count <= class_id || class_id < 0) return false;
-            int count = config.classes.Count;
+            if (config.classes.Count <= class_id || class_id < 0)
+            {
+                return false;
+            }
+
             int buff_count = config.classes[class_id].buffs.Count;
-            //Console.Write(config.classes[class_id].buffs[0].buff_name);
             for (int i = 0; i < buff_count; i++)
             {
                 config.classes[class_id].buffs[i].Parse();
-                //Console.Write(config.classes[class_id].buffs[i].id);
                 TShock.Players[player_index].SetBuff(config.classes[class_id].buffs[i].id, 216000);
             }
             return true;
@@ -195,7 +206,7 @@ namespace TeamPointPvP
                 }
             }
             string classSelectErrorMsg = "Invalid class name! Usage: " + TShock.Config.CommandSpecifier + "change <class_name>\nClass List: " + string.Join(", ", can_chose_classes.Select(x => config.classes[x].name));
-            if (!IsInStage(player.Center.X, player.Center.Y)) //TODO: Use config, or Automaticary set from world info
+            if (!IsInStage(player.Center.X, player.Center.Y))
             {
                 if (args.Parameters.Count != 1 || args.Parameters[0] == null || args.Parameters[0] == "")
                 {
@@ -208,7 +219,6 @@ namespace TeamPointPvP
                 {
                     if (config.classes[can_chose_classes[i]].name == class_name)
                     {
-                        //NetMessage.BroadcastChatMessage(NetworkText.FromLiteral("index = " + args.Player.Index + " class : " + i), Color.White);
                         PlayerClass[args.Player.Index] = config.classes[can_chose_classes[i]].id;
                         id = config.classes[can_chose_classes[i]].id;
                         break;

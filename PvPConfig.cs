@@ -1,10 +1,8 @@
-﻿using Newtonsoft.Json;
+﻿using Microsoft.Xna.Framework;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace TeamPointPvP
 {
@@ -12,11 +10,15 @@ namespace TeamPointPvP
     {
         [JsonProperty("classes")]
         public List<PvPClass> classes = new List<PvPClass>();
+
+        [JsonProperty("maps")]
+        public List<PvPMap> maps = new List<PvPMap>();
+
         internal static PvPConfig Read(string path)
         {
             if (!File.Exists(path))
             {
-                Console.WriteLine("Using default configs");
+                Console.WriteLine("PvP_class_config: Using default configs");
                 PvPConfig config = new PvPConfig();
                 config.Write(path);
                 return config;
@@ -53,5 +55,35 @@ namespace TeamPointPvP
                 sw.Write(str);
             }
         }
+    }
+
+    class PvPMap
+    {
+        public class Area
+        {
+            public int minX;
+            public int minY;
+            public int maxX;
+            public int maxY;
+
+            public bool ContainsPoint(Vector2 point)
+            {
+                return ContainsPoint(point.X, point.Y);
+            }
+
+            public bool ContainsPoint(float x, float y)
+            {
+                return minX <= x && minY <= y && x <= maxX && y <= maxY;
+            }
+        }
+
+        [JsonProperty("name")]
+        public string name;
+
+        [JsonProperty("blacklist")]
+        public List<Area> blacklist = new List<Area>();
+
+        [JsonProperty("whitelist")]
+        public List<Area> whitelist = new List<Area>();
     }
 }

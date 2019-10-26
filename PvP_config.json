@@ -1,8 +1,7 @@
 {
   "classes": [
     {
-      "class_name": "standard",
-      "id": 0,
+      "class_name": "standard", 
       "team": "all",
       "items": [
         {
@@ -10,7 +9,8 @@
           "prefix": "Hurtful"
         },
         {
-          "item_name": "Musket"
+          "item_name": "Musket",
+          "prefix": "Ruthless"
         },
         {
           "item_name": "Magic Mirror"
@@ -315,6 +315,9 @@
         },
         {
           "buff_name": "Tipsy"
+        },
+        {
+          "buff_name": "Swiftness"
         }
       ],
       "armor_dye": [
@@ -376,7 +379,8 @@
           "prefix": "Hurtful"
         },
         {
-          "item_name": "Musket"
+          "item_name": "Musket",
+          "prefix": "Ruthless"
         },
         {
           "item_name": "Magic Mirror"
@@ -525,7 +529,8 @@
           "prefix": "Hurtful"
         },
         {
-          "item_name": "Musket"
+          "item_name": "Musket",
+          "prefix": "Ruthless"
         },
         {
           "item_name": "Magic Mirror"
@@ -635,6 +640,9 @@
         },
         {
           "buff_name": "Ichor"
+        },
+        {
+          "buff_name": "Slow"
         }
       ],
       "armor_dye": [
@@ -725,20 +733,20 @@
           "stack": 999
         },
         {
-          "item_name": "Invisible Position",
+          "item_name": "Invisibility Potion",
           "stack": 30
         },
         {
-          "item_name": "Invisible Position",
-          "stack": 999
+          "item_name": "Invisibility Potion",
+          "stack": 30
         },
         {
-          "item_name": "Invisible Position",
-          "stack": 999
+          "item_name": "Invisibility Potion",
+          "stack": 30
         },
         {
-          "item_name": "Invisible Position",
-          "stack": 999
+          "item_name": "Invisibility Potion",
+          "stack": 30
         }
       ],
       "armor": [
@@ -1052,6 +1060,9 @@
       "buffs": [
         {
            "buff_name": "MagicPower"
+        },
+        {
+          "buff_name": "ManaRegeneration"
         }
       ],
       "armor_dye": [
@@ -1624,5 +1635,543 @@
       "max_hp": 220,
       "max_mp": 20
     },
+    {
+      "class_name": "rider",
+      "id": 12,
+      "team": "all",
+      "items": [
+        {
+          "item_name": "Sleepy Octopod",
+          "prefix": "Ruthless"
+        },
+        {
+          "item_name": "Magic Mirror"
+        }
+      ],
+      "ammos": [],
+      "armor": [
+        {
+          "item_name": "Shinobi Infiltrator's Helmet",
+          "armor_slot": "head"
+        },
+        {
+          "item_name": "Monk's Shirt",
+          "armor_slot": "body"
+        },
+        {
+          "item_name": "Hallowed Greaves",
+          "armor_slot": "leg"
+        }
+      ],
+      "accessory": [
+        {
+          "item_name": "Lucky Horseshoe",
+          "prefix": "Menacing"
+        },
+        {
+          "item_name": "Cloud in a Bottle",
+          "prefix": "Menacing"
+        },
+        {
+          "item_name": "Warrior Emblem",
+          "prefix": "Menacing"
+        },
+        {
+          "item_name": "Avenger Emblem",
+          "prefix": "Menacing"
+        },
+        {
+          "item_name": "Shiny Stone",
+          "prefix": "Menacing"
+        }
+      ],
+      "vanity_armor": [
+        {
+          "item_name": "Cowboy Hat",
+          "armor_slot": "head"
+        },
+        {
+          "item_name": "Cowboy Jacket",
+          "armor_slot": "body"
+        },
+        {
+          "item_name": "Cowboy Pants",
+          "armor_slot": "leg"
+        }
+      ],
+      "vanity_accessory": [
+        {
+          "item_name": "Bundled Party Balloons"
+        }
+      ],
+      "buffs": [
+        {
+          "buff_name": "Electrified"
+        },
+        {
+          "buff_name": "58"
+        },
+        {
+          "buff_name": "Honey"
+        },
+        {
+          "buff_name": "Wrath"
+        }
+      ],
+      "armor_dye": [
+        {
+          "item_name": "Team Dye",
+          "armor_slot": "head"
+        },
+        {
+          "item_name": "Team Dye",
+          "armor_slot": "body"
+        },
+        {
+          "item_name": "Team Dye",
+          "armor_slot": "leg"
+        }
+      ],
+      "accessory_dye": [
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        }
+      ],
+      "misc_items": [
+        {
+          "item_name": "Suspicious Looking Tentacle",
+          "misc_slot": "light_pet"
+        },
+        {
+          "item_name": "Ancient Horn",
+          "misc_slot": "mount"
+        }
+      ],
+      "misc_dye": [
+        {
+          "item_name": "Team Dye",
+          "misc_slot": "light_pet"
+        },
+        {
+          "item_name": "Team Dye",
+          "misc_slot": "mount"
+        }
+      ],
+      "max_hp": 300,
+      "max_mp": 20
+    },
+    {
+      "class_name": "martian",
+      "id": 13,
+      "team": "all",
+      "items": [
+        {
+          "item_name": "Charged Blaster Cannon",
+          "prefix": "Intense"
+        },
+        {
+          "item_name": "Magic Mirror"
+        }
+      ],
+      "ammos": [],
+      "armor": [
+        {
+          "item_name": "Magic Hat",
+          "armor_slot": "head"
+        },
+        {
+          "item_name": "Apprentice's Robe",
+          "armor_slot": "body"
+        },
+        {
+          "item_name": "Nebula Leggings",
+          "armor_slot": "leg"
+        }
+      ],
+      "accessory": [
+        {
+          "item_name": "Lucky Horseshoe",
+          "prefix": "Warding"
+        },
+        {
+          "item_name": "Rocket Boots",
+          "prefix": "Warding"
+        },
+        {
+          "item_name": "Mana Regeneration Band",
+          "prefix": "Arcane"
+        },
+        {
+          "item_name": "Band of Starpower",
+          "prefix": "Jagged"
+        }
+      ],
+      "vanity_armor": [
+        {
+          "item_name": "Martian Uniform Helmet",
+          "armor_slot": "head"
+        },
+        {
+          "item_name": "Martian Uniform Torso",
+          "armor_slot": "body"
+        },
+        {
+          "item_name": "Martian Uniform Pants",
+          "armor_slot": "leg"
+        }
+      ],
+      "vanity_accessory": [
+        {
+          "item_name": "Bundled Party Balloons"
+        }
+      ],
+      "buffs": [
+        {
+          "buff_name": "ManaRegeneration"
+        }
+      ],
+      "armor_dye": [
+        {
+          "item_name": "Team Dye",
+          "armor_slot": "head"
+        },
+        {
+          "item_name": "Team Dye",
+          "armor_slot": "body"
+        },
+        {
+          "item_name": "Team Dye",
+          "armor_slot": "leg"
+        }
+      ],
+      "accessory_dye": [
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        }
+      ],
+      "misc_items": [
+        {
+          "item_name": "Suspicious Looking Tentacle",
+          "misc_slot": "light_pet"
+        }
+      ],
+      "misc_dye": [
+        {
+          "item_name": "Team Dye",
+          "misc_slot": "light_pet"
+        }
+      ],
+      "max_hp": 200,
+      "max_mp": 20
+    },
+    {
+      "class_name": "mario",
+      "id": 14,
+      "team": "all",
+      "items": [
+        {
+          "item_name": "Flower of Fire",
+          "prefix": "Ruthless"
+        },
+        {
+          "item_name": "Star Cannon",
+          "prefix": "Lethargic"
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Super Mana Potion",
+          "stack": 99
+        },
+        {
+          "item_name": "Magic Mirror"
+        }
+      ],
+      "ammos": [
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+        {
+          "item_name": "Fallen Star",
+          "stack": 99
+        },
+      ],
+      "armor": [
+        {
+          "item_name": "Cobalt Hat",
+          "armor_slot": "head"
+        },
+        {
+          "item_name": "Dark Artist's Robes",
+          "armor_slot": "body"
+        },
+        {
+          "item_name": "Nebula Leggings",
+          "armor_slot": "leg"
+        }
+      ],
+      "accessory": [
+        {
+          "item_name": "Lucky Horseshoe",
+          "prefix": "Menacing"
+        },
+        {
+          "item_name": "Tsunami in a Bottle",
+          "prefix": "Menacing"
+        },
+        {
+          "item_name": "Celestial Emblem",
+          "prefix": "Menacing"
+        },
+        {
+          "item_name": "Sorcerer Emblem",
+          "prefix": "Menacing"
+        },
+        {
+          "item_name": "Avenger Emblem",
+          "prefix": "Menacing"
+        },
+        {
+          "item_name": "Mana Flower",
+          "prefix": "Menacing"
+        }
+      ],
+      "vanity_armor": [
+        {
+          "item_name": "Plumber's Hat",
+          "armor_slot": "head"
+        },
+        {
+          "item_name": "Plumber's Shirt",
+          "armor_slot": "body"
+        },
+        {
+          "item_name": "Plumber's Pants",
+          "armor_slot": "leg"
+        }
+      ],
+      "vanity_accessory": [
+        {
+          "item_name": "Bundled Party Balloons"
+        }
+      ],
+      "buffs": [
+        {
+          "buff_name": "MagicPower"
+        },
+        {
+          "buff_name": "AmmoReservation"
+        },
+        {
+          "buff_name": "AmmoBox"
+        }
+      ],
+      "armor_dye": [
+        {
+          "item_name": "Team Dye",
+          "armor_slot": "head"
+        },
+        {
+          "item_name": "Team Dye",
+          "armor_slot": "body"
+        },
+        {
+          "item_name": "Team Dye",
+          "armor_slot": "leg"
+        }
+      ],
+      "accessory_dye": [
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        },
+        {
+          "item_name": "Team Dye"
+        }
+      ],
+      "misc_items": [
+        {
+          "item_name": "Suspicious Looking Tentacle",
+          "misc_slot": "light_pet"
+        }
+      ],
+      "misc_dye": [
+        {
+          "item_name": "Team Dye",
+          "misc_slot": "light_pet"
+        }
+      ],
+      "max_hp": 240,
+      "max_mp": 20
+    }
+  ],
+  "maps": [
+    {
+      "name": "TS-TeamBattleStage",
+      "blacklist": [
+        {
+          "minX": 3754,
+          "minY": 381,
+          "maxX": 4009,
+          "maxY": 490,
+        },
+        {
+          "minX": 3661,
+          "minY": 539,
+          "maxX": 4006,
+          "maxY": 650,
+        },
+        {
+          "minX": 3734,
+          "minY": 708,
+          "maxX": 3921,
+          "maxY": 843,
+        },
+        {
+          "minX": 3727,
+          "minY": 1036,
+          "maxX": 4009,
+          "maxY": 1133,
+        }
+      ],
+      "whitelist": [
+        {
+          "minX": 3700,
+          "minY": 725,
+          "maxX": 3737,
+          "maxY": 732,
+        },
+        {
+          "minX": 3918,
+          "minY": 725,
+          "maxX": 3955,
+          "maxY": 732,
+        }
+      ]
+    }
   ]
 }
