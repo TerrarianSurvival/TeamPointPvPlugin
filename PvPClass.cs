@@ -263,7 +263,7 @@ namespace TeamPointPvP
         private bool need_parse = true;
         
         [JsonIgnore]
-        public List<int> TeamID { get; private set; }
+        public List<int> TeamIDs { get; private set; }
 
         [JsonProperty("items")]
         public List<ItemData> Items { get; private set; } = new List<ItemData>();
@@ -318,7 +318,7 @@ namespace TeamPointPvP
                 switch (team_.Trim().ToUpperInvariant())
                 {
                     case "ALL":
-                        TeamID = new List<int>() { 0, 1, 2, 3, 4, 5 };
+                        TeamIDs = new List<int>() { 0, 1, 2, 3, 4, 5 };
                         need_parse = false;
                         return;
                     case "WHITE":
@@ -346,7 +346,7 @@ namespace TeamPointPvP
                 list.Add(id);
             }
 
-            TeamID = list;
+            TeamIDs = list;
             need_parse = false;
         }
     }

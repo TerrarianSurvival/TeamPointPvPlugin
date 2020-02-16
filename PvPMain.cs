@@ -223,7 +223,7 @@ namespace TeamPointPvP
 
         private void OnSpawn(object sender, GetDataHandlers.SpawnEventArgs e)
         {
-            int playerIndex = e.Player.Index;
+            int playerIndex = e.PlayerId;
             if (PlayerClass[playerIndex] != -1)
             {
                 SetBuffs(PlayerClass[playerIndex], playerIndex);
@@ -298,12 +298,12 @@ namespace TeamPointPvP
             for (int i = 0; i < count; i++)
             {
                 config.Classes[i].Parse();
-                if (config.Classes[i].TeamID.Contains(player.team))
+                if (config.Classes[i].TeamIDs.Contains(player.team))
                 {
                     can_chose_classes.Add(i);
                 }
             }
-            string classSelectErrorMsg = "Invalid class name! Usage: " + TShock.Config.CommandSpecifier + "change <class_name>\nClass List: " + string.Join(", ", can_chose_classes.Select(x => config.Classes[x].Name));
+            string classSelectErrorMsg = "Invalid class name! Usage: " + TShock.Config.CommandSpecifier + "change <class_name>\nClass List: " + string.Join(", ", can_chose_classes.Select(x => config.Classes[x].Name.ToLower(Culture)));
             if (!IsInStage(player.Center.X, player.Center.Y))
             {
                 if (args.Parameters.Count != 1 || string.IsNullOrEmpty(args.Parameters[0]))
@@ -311,7 +311,7 @@ namespace TeamPointPvP
                     args.Player.SendErrorMessage(classSelectErrorMsg);
                     return;
                 }
-                int id = 0;
+                int id = -1;
                 string class_name = args.Parameters[0].ToUpperInvariant();
                 for (int i = 0; i < can_chose_classes.Count; i++)
                 {
@@ -321,6 +321,12 @@ namespace TeamPointPvP
                         id = config.Classes[can_chose_classes[i]].Id;
                         break;
                     }
+                }
+
+                if (id == -1)
+                {
+                    args.Player.SendErrorMessage(classSelectErrorMsg);
+                    return;
                 }
                 
                 #region ResetAndSetInventory
