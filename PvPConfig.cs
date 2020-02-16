@@ -8,17 +8,19 @@ namespace TeamPointPvP
 {
     class PvPConfig
     {
+        private const string USE_DEFAULT_CONFIG_MESSAGE = "PvP_class_config: Using default configs";
+
         [JsonProperty("classes")]
-        public List<PvPClass> classes = new List<PvPClass>();
+        public List<PvPClass> Classes { get; private set; } = new List<PvPClass>();
 
         [JsonProperty("maps")]
-        public List<PvPMap> maps = new List<PvPMap>();
+        public List<PvPMap> Maps { get; private set; } = new List<PvPMap>();
 
         internal static PvPConfig Read(string path)
         {
             if (!File.Exists(path))
             {
-                Console.WriteLine("PvP_class_config: Using default configs");
+                Console.WriteLine(USE_DEFAULT_CONFIG_MESSAGE);
                 PvPConfig config = new PvPConfig();
                 config.Write(path);
                 return config;
@@ -34,6 +36,7 @@ namespace TeamPointPvP
             using (var sr = new StreamReader(stream))
             {
                 return JsonConvert.DeserializeObject<PvPConfig>(sr.ReadToEnd());
+                
             }
         }
 
@@ -57,14 +60,22 @@ namespace TeamPointPvP
         }
     }
 
-    class PvPMap
+    internal class PvPMap
     {
         public class Area
         {
-            public int minX;
-            public int minY;
-            public int maxX;
-            public int maxY;
+            public int MinX { get; }
+            public int MinY { get; }
+            public int MaxX { get; }
+            public int MaxY { get; }
+
+            public Area(int minX, int minY, int maxX, int maxY)
+            {
+                MinX = minX;
+                MinY = minY;
+                MaxX = maxX;
+                MaxY = maxY;
+            }
 
             public bool ContainsPoint(Vector2 point)
             {
@@ -73,17 +84,17 @@ namespace TeamPointPvP
 
             public bool ContainsPoint(float x, float y)
             {
-                return minX <= x && minY <= y && x <= maxX && y <= maxY;
+                return MinX <= x && MinY <= y && x <= MaxX && y <= MaxY;
             }
         }
 
         [JsonProperty("name")]
-        public string name;
+        public string Name { get; private set; }
 
         [JsonProperty("blacklist")]
-        public List<Area> blacklist = new List<Area>();
+        public List<Area> BlackList { get; private set; } = new List<Area>();
 
         [JsonProperty("whitelist")]
-        public List<Area> whitelist = new List<Area>();
+        public List<Area> WhiteList { get; private set; } = new List<Area>();
     }
 }

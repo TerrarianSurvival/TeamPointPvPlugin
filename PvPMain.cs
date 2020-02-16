@@ -1,12 +1,12 @@
 ﻿using Microsoft.Xna.Framework;
-using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
-using System.Threading.Tasks;
+
 using Terraria;
 using Terraria.DataStructures;
 using Terraria.ID;
@@ -29,6 +29,8 @@ namespace TeamPointPvP
 
         private PvPConfig config;
         private readonly string PVP_CONFIG_PATH;
+
+        internal static readonly CultureInfo Culture = new CultureInfo("en-US");
 
         public PvPMain(Main game) : base(game)
         {
@@ -55,6 +57,10 @@ namespace TeamPointPvP
             ServerApi.Hooks.ServerLeave.Register(this, OnLeave);
             ServerApi.Hooks.NetGetData.Register(this, OnGetData);
             ServerApi.Hooks.ServerChat.Register(this, OnChat);
+            
+            GetDataHandlers.KillMe += OnKillMe;
+            GetDataHandlers.PlayerSpawn += OnSpawn;
+            
             GeneralHooks.ReloadEvent += OnReload;
         }
 
@@ -66,6 +72,10 @@ namespace TeamPointPvP
                 ServerApi.Hooks.ServerLeave.Deregister(this, OnLeave);
                 ServerApi.Hooks.NetGetData.Deregister(this, OnGetData);
                 ServerApi.Hooks.ServerChat.Deregister(this, OnChat);
+
+                GetDataHandlers.KillMe -= OnKillMe;
+                GetDataHandlers.PlayerSpawn -= OnSpawn;
+
                 GeneralHooks.ReloadEvent -= OnReload;
             }
             base.Dispose(disposing);
@@ -74,18 +84,18 @@ namespace TeamPointPvP
 
         //Couldn't find OnWorldLoaded hook
         private bool mapChecked = false;
-        private List<PvPMap.Area> currentBlacklist = null;
-        private List<PvPMap.Area> currentWhitelist = null;
+        private List<PvPMap.Area> currentBlacklist = new List<PvPMap.Area>();
+        private List<PvPMap.Area> currentWhitelist = new List<PvPMap.Area>();
         private bool IsInStage (float playerX, float playerY)
         {
             if (!mapChecked)
             {
-                foreach (var map in config.maps)
+                foreach (var map in config.Maps)
                 {
-                    if (Main.worldName.Contains(map.name))
+                    if (Main.worldName.Contains(map.Name))
                     {
-                        currentBlacklist = map.blacklist;
-                        currentWhitelist = map.whitelist;
+                        currentBlacklist = map.BlackList;
+                        currentWhitelist = map.WhiteList;
                         break;
                     }
                 }
@@ -111,6 +121,115 @@ namespace TeamPointPvP
                 }
             }
             return false;
+        }
+
+        private void OnKillMe(object sender, GetDataHandlers.KillMeEventArgs args)
+        {
+            PlayerDeathReason reason = args.PlayerDeathReason;
+            TSPlayer enemyPlayer = reason.SourcePlayerIndex >= 0 && reason.SourcePlayerIndex < 255
+                ? TShock.Players[reason.SourcePlayerIndex] : null;
+
+            // Format: DeadPlayer, KillerPlayer, Damage, DeadTeam, KillerTeam, KillerProj, KillerItem, KillerNPC, KillerOther, DeathText
+            string deadPlayerName = args.Player.Name;
+            string killerPlayerName;
+            string killerPlayerTeam;
+            string projName = reason.SourceProjectileIndex >= 0 ? Lang.GetProjectileName(reason.SourceProjectileType).Value : "";
+            string itemName = reason.SourceItemType != 0 ? Lang.GetItemName(reason.SourceItemType).Value : "";
+            string npcName = reason.SourceNPCIndex >= 0 ? Main.npc[reason.SourceNPCIndex].GetGivenOrTypeNetName().ToString() : "";
+            string otherText = "";
+
+            if (enemyPlayer == null)
+            {
+                killerPlayerName = "";
+                killerPlayerTeam = "";
+            }
+            else
+            {
+                killerPlayerName = enemyPlayer.Name;
+                killerPlayerTeam = enemyPlayer.Team.ToString(Culture);
+            }
+
+            switch (reason.SourceOtherIndex)
+            {
+                case 0:
+                    otherText = "FELL";
+                    break;
+                case 1:
+                    otherText = "DROWNED";
+                    break;
+                case 2:
+                    otherText = "LAVA";
+                    break;
+                case 3:
+                    otherText = "DEFAULT";
+                    break;
+                case 4:
+                    otherText = "SLAIN";
+                    break;
+                case 5:
+                    otherText = "PETRIFIED";
+                    break;
+                case 6:
+                    otherText = "STABBED";
+                    break;
+                case 7:
+                    otherText = "SUFFOCATED";
+                    break;
+                case 8:
+                    otherText = "BURNED";
+                    break;
+                case 9:
+                    otherText = "POISONED";
+                    break;
+                case 10:
+                    otherText = "ELECTROCUTED";
+                    break;
+                case 11:
+                    otherText = "TRIED_TO_ESCAPE";
+                    break;
+                case 12:
+                    otherText = "WAS_LICKED";
+                    break;
+                case 13:
+                    otherText = "TELEPORT_1";
+                    break;
+                case 14:
+                    otherText = "TELEPORT_2_MALE";
+                    break;
+                case 15:
+                    otherText = "TELEPORT_2_FEMALE";
+                    break;
+                case 254:
+                    otherText = "NONE";
+                    break;
+                case 255:
+                    otherText = "SLAIN";
+                    break;
+            }
+
+            string logText = string.Format(Culture, "\"{0}\",\"{1}\",\"{2}\",\"{3}\",\"{4}\",\"{5}\",\"{6}\",\"{7}\",\"{8}\",\"{9}\"",
+                deadPlayerName,
+                killerPlayerName,
+                args.Damage,
+                args.Player.Team,
+                killerPlayerTeam,
+                projName,
+                itemName,
+                npcName,
+                otherText,
+                reason.GetDeathText(deadPlayerName).ToString());
+            TShock.Log.Write(logText, System.Diagnostics.TraceLevel.Info);
+        }
+
+        private void OnSpawn(object sender, GetDataHandlers.SpawnEventArgs e)
+        {
+            int playerIndex = e.Player.Index;
+            if (PlayerClass[playerIndex] != -1)
+            {
+                SetBuffs(PlayerClass[playerIndex], playerIndex);
+
+                TShock.Players[playerIndex].Heal(TShock.Players[playerIndex].TPlayer.statLifeMax);
+            }
         }
 
         private void OnReload(ReloadEventArgs e)
@@ -146,42 +265,21 @@ namespace TeamPointPvP
                         TShock.Players[playerIndex].Heal(TShock.Players[playerIndex].TPlayer.statLifeMax);
                     }
                     break;
-                case PacketTypes.PlayerDeathV2:
-                    if (args.Handled)
-                    {
-                        return;
-                    }
-                    int index = args.Msg.reader.ReadByte();
-                    if (Main.netMode == 2)
-                    {
-                        index = args.Index;
-                    }
-                    PlayerDeathReason playerDeathReason = PlayerDeathReason.FromReader(args.Msg.reader);
-                    int damage = args.Msg.reader.ReadInt16();
-                    int hitDirection = args.Msg.reader.ReadByte() - 1;
-                    bool pvp = ((BitsByte)args.Msg.reader.ReadByte())[0];
-                    Main.player[index].KillMe(playerDeathReason, damage, hitDirection, pvp);
-                    if (Main.netMode == 2)
-                    {
-                        NetMessage.SendPlayerDeath(index, playerDeathReason, damage, hitDirection, pvp, -1, args.Index);
-                    }
-                    args.Handled = true;
-                    break;
             }
         }
 
         private bool SetBuffs (int class_id, int player_index)
         {
-            if (config.classes.Count <= class_id || class_id < 0)
+            if (config.Classes.Count <= class_id || class_id < 0)
             {
                 return false;
             }
 
-            int buff_count = config.classes[class_id].buffs.Count;
+            int buff_count = config.Classes[class_id].Buffs.Count;
             for (int i = 0; i < buff_count; i++)
             {
-                config.classes[class_id].buffs[i].Parse();
-                TShock.Players[player_index].SetBuff(config.classes[class_id].buffs[i].id, 216000);
+                config.Classes[class_id].Buffs[i].Parse();
+                TShock.Players[player_index].SetBuff(config.Classes[class_id].Buffs[i].id, 216000);
             }
             return true;
         }
@@ -196,31 +294,31 @@ namespace TeamPointPvP
         {
             Player player = args.TPlayer;
             var can_chose_classes = new List<int>();
-            int count = config.classes.Count;
+            int count = config.Classes.Count;
             for (int i = 0; i < count; i++)
             {
-                config.classes[i].Parse();
-                if (config.classes[i].team_id.Contains(player.team))
+                config.Classes[i].Parse();
+                if (config.Classes[i].TeamID.Contains(player.team))
                 {
                     can_chose_classes.Add(i);
                 }
             }
-            string classSelectErrorMsg = "Invalid class name! Usage: " + TShock.Config.CommandSpecifier + "change <class_name>\nClass List: " + string.Join(", ", can_chose_classes.Select(x => config.classes[x].name));
+            string classSelectErrorMsg = "Invalid class name! Usage: " + TShock.Config.CommandSpecifier + "change <class_name>\nClass List: " + string.Join(", ", can_chose_classes.Select(x => config.Classes[x].Name));
             if (!IsInStage(player.Center.X, player.Center.Y))
             {
-                if (args.Parameters.Count != 1 || args.Parameters[0] == null || args.Parameters[0] == "")
+                if (args.Parameters.Count != 1 || string.IsNullOrEmpty(args.Parameters[0]))
                 {
                     args.Player.SendErrorMessage(classSelectErrorMsg);
                     return;
                 }
                 int id = 0;
-                string class_name = args.Parameters[0].ToLower();
+                string class_name = args.Parameters[0].ToUpperInvariant();
                 for (int i = 0; i < can_chose_classes.Count; i++)
                 {
-                    if (config.classes[can_chose_classes[i]].name == class_name)
+                    if (config.Classes[can_chose_classes[i]].Name == class_name)
                     {
-                        PlayerClass[args.Player.Index] = config.classes[can_chose_classes[i]].id;
-                        id = config.classes[can_chose_classes[i]].id;
+                        PlayerClass[args.Player.Index] = config.Classes[can_chose_classes[i]].Id;
+                        id = config.Classes[can_chose_classes[i]].Id;
                         break;
                     }
                 }
@@ -272,85 +370,85 @@ namespace TeamPointPvP
                 const int acc_start = 3;
                 for (int i = 0; i < num_classes; i++)
                 {
-                    var klass = config.classes[can_chose_classes[i]];
-                    if (klass.name == class_name)
+                    var klass = config.Classes[can_chose_classes[i]];
+                    if (klass.Name == class_name)
                     {
-                        for (int j = 0; j < klass.items.Count; j++)
+                        for (int j = 0; j < klass.Items.Count; j++)
                         {
-                            klass.items[j].Parse();
-                            player.inventory[j].SetDefaults(klass.items[j].item_id);
-                            player.inventory[j].prefix = (byte)klass.items[j].prefix;
-                            player.inventory[j].stack = klass.items[j].stack;
+                            klass.Items[j].Parse();
+                            player.inventory[j].SetDefaults(klass.Items[j].ItemID);
+                            player.inventory[j].prefix = (byte)klass.Items[j].Prefix;
+                            player.inventory[j].stack = klass.Items[j].Stack;
                         }
-                        for (int j = 0; j < klass.ammos.Count; j++)
+                        for (int j = 0; j < klass.Ammos.Count; j++)
                         {
-                            klass.ammos[j].Parse();
-                            player.inventory[max_inventory - j].SetDefaults(klass.ammos[j].item_id);
+                            klass.Ammos[j].Parse();
+                            player.inventory[max_inventory - j].SetDefaults(klass.Ammos[j].ItemID);
                             //player.inventory[max_inventory - j].prefix = (byte)klass.ammos[j].prefix;
-                            player.inventory[max_inventory - j].stack = klass.ammos[j].stack;
+                            player.inventory[max_inventory - j].stack = klass.Ammos[j].Stack;
                         }
-                        for (int j = 0; j < klass.armors.Count; j++)
+                        for (int j = 0; j < klass.Armors.Count; j++)
                         {
-                            klass.armors[j].Parse();
-                            int index = klass.armors[j].slot_id;
-                            player.armor[index].SetDefaults(klass.armors[j].item_id);
+                            klass.Armors[j].Parse();
+                            int index = klass.Armors[j].SlotID;
+                            player.armor[index].SetDefaults(klass.Armors[j].ItemID);
                             //player.armor[index].prefix = (byte)klass.armors[j].prefix;
                             //player.armor[index].stack = klass.armors[j].stack;
                         }
-                        for (int j = 0; j < klass.vanity_armor.Count; j++)
+                        for (int j = 0; j < klass.VanityArmors.Count; j++)
                         {
-                            klass.vanity_armor[j].Parse();
-                            int index = klass.vanity_armor[j].slot_id;
-                            player.armor[vanity_start + index].SetDefaults(klass.vanity_armor[j].item_id);
+                            klass.VanityArmors[j].Parse();
+                            int index = klass.VanityArmors[j].SlotID;
+                            player.armor[vanity_start + index].SetDefaults(klass.VanityArmors[j].ItemID);
                             //player.armor[vanity_start + index].prefix = (byte)klass.vanity_armor[j].prefix;
                             //player.armor[vanity_start + index].stack = klass.vanity_armor[j].stack;
                         }
-                        for (int j = 0; j < klass.armor_dyes.Count; j++)
+                        for (int j = 0; j < klass.ArmorDyes.Count; j++)
                         {
-                            klass.armor_dyes[j].Parse();
-                            player.dye[j].SetDefaults(klass.armor_dyes[j].item_id);
+                            klass.ArmorDyes[j].Parse();
+                            player.dye[j].SetDefaults(klass.ArmorDyes[j].ItemID);
                             //player.dye[j].prefix = (byte)klass.armor_dyes[j].prefix;
                             //player.dye[j].stack = klass.armor_dyes[j].stack;
                         }
-                        for (int j = 0; j < klass.accessorys.Count; j++)
+                        for (int j = 0; j < klass.Accessorys.Count; j++)
                         {
-                            klass.accessorys[j].Parse();
-                            player.armor[acc_start + j].SetDefaults(klass.accessorys[j].item_id);
-                            player.armor[acc_start + j].prefix = (byte)klass.accessorys[j].prefix;
+                            klass.Accessorys[j].Parse();
+                            player.armor[acc_start + j].SetDefaults(klass.Accessorys[j].ItemID);
+                            player.armor[acc_start + j].prefix = (byte)klass.Accessorys[j].Prefix;
                             //player.armor[acc_start + j].stack = klass.accessorys[j].stack;
                         }
-                        for (int j = 0; j < klass.vanity_accessorys.Count; j++)
+                        for (int j = 0; j < klass.VanityAccessorys.Count; j++)
                         {
-                            klass.vanity_accessorys[j].Parse();
-                            player.armor[vanity_start + acc_start + j].SetDefaults(klass.vanity_accessorys[j].item_id);
-                            player.armor[vanity_start + acc_start + j].prefix = (byte)klass.vanity_accessorys[j].prefix;
+                            klass.VanityAccessorys[j].Parse();
+                            player.armor[vanity_start + acc_start + j].SetDefaults(klass.VanityAccessorys[j].ItemID);
+                            player.armor[vanity_start + acc_start + j].prefix = (byte)klass.VanityAccessorys[j].Prefix;
                             //player.armor[vanity_start + acc_start + j].stack = klass.vanity_accessorys[j].stack;
                         }
-                        for (int j = 0; j < klass.accessory_dyes.Count; j++)
+                        for (int j = 0; j < klass.AccessoryDyes.Count; j++)
                         {
-                            klass.accessory_dyes[j].Parse();
-                            player.dye[acc_start + j].SetDefaults(klass.accessory_dyes[j].item_id);
+                            klass.AccessoryDyes[j].Parse();
+                            player.dye[acc_start + j].SetDefaults(klass.AccessoryDyes[j].ItemID);
                             //player.dye[acc_start + j].prefix = (byte)klass.accessory_dyes[j].prefix;
                             //player.dye[acc_start + j].stack = klass.accessory_dyes[j].stack;
                         }
-                        for (int j = 0; j < klass.misc_items.Count; j++)
+                        for (int j = 0; j < klass.MiscItems.Count; j++)
                         {
-                            klass.misc_items[j].Parse();
-                            int index = klass.misc_items[j].slot_id;
-                            player.miscEquips[index].SetDefaults(klass.misc_items[j].item_id);
+                            klass.MiscItems[j].Parse();
+                            int index = klass.MiscItems[j].SlotID;
+                            player.miscEquips[index].SetDefaults(klass.MiscItems[j].ItemID);
                             //player.miscEquips[index].prefix = (byte)klass.misc_items[j].prefix;
                             //player.miscEquips[index].stack = klass.misc_items[j].stack;
                         }
-                        for (int j = 0; j < klass.misc_dyes.Count; j++)
+                        for (int j = 0; j < klass.MiscDyes.Count; j++)
                         {
-                            klass.misc_dyes[j].Parse();
-                            int index = klass.misc_dyes[j].slot_id;
-                            player.miscDyes[index].SetDefaults(klass.misc_dyes[j].item_id);
+                            klass.MiscDyes[j].Parse();
+                            int index = klass.MiscDyes[j].SlotID;
+                            player.miscDyes[index].SetDefaults(klass.MiscDyes[j].ItemID);
                             //player.miscDyes[index].prefix = (byte)klass.misc_dyes[j].prefix;
                             //player.miscDyes[index].stack = klass.misc_dyes[j].stack;
                         }
-                        player.statLifeMax = klass.hp;
-                        player.statManaMax = klass.mp;
+                        player.statLifeMax = klass.Hp;
+                        player.statManaMax = klass.Mp;
                         break;
                     }
                 }
@@ -433,7 +531,9 @@ namespace TeamPointPvP
         {
             //dont use until fixed allcommand bug
             if (args.Handled) return;
-            if (TShock.Players[args.Who].TPlayer.team != 0 && !args.Text.StartsWith(TShock.Config.CommandSpecifier) && !args.Text.StartsWith(TShock.Config.CommandSilentSpecifier))
+            if (TShock.Players[args.Who].TPlayer.team != 0
+                && !args.Text.StartsWith(TShock.Config.CommandSpecifier, StringComparison.InvariantCultureIgnoreCase)
+                && !args.Text.StartsWith(TShock.Config.CommandSilentSpecifier, StringComparison.InvariantCultureIgnoreCase))
             {
                 string text = args.Text;
                 Commands.HandleCommand(TShock.Players[args.Who], TShock.Config.CommandSpecifier + "p " + text);
@@ -450,7 +550,7 @@ namespace TeamPointPvP
                 tSPlayer.SendErrorMessage("You are muted!");
                 return;
             }
-            string msg = string.Format("{0}: {1}", args.Player.Name, String.Join(" ", args.Parameters));
+            string msg = string.Format(Culture, "{0}: {1}", args.Player.Name, string.Join(" ", args.Parameters));
             NetMessage.BroadcastChatMessage(NetworkText.FromLiteral(msg), Color.White);
             //TSPlayer.All.SendMessage(msg, 255, 255, 255);
         }

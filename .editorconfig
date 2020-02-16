@@ -1,0 +1,4 @@
+﻿[*.cs]
+
+# CA1303: ローカライズされるパラメーターとしてリテラルを渡さない
+dotnet_diagnostic.CA1303.severity = none

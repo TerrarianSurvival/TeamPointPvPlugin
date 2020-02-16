@@ -1,5 +1,4 @@
-﻿
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using System;
 using System.Reflection;
 using System.Collections.Generic;
@@ -13,19 +12,22 @@ namespace TeamPointPvP
     public class ItemData
     {
         [JsonProperty("item_name")]
-        string item_name = "";
+        public string ItemName { get; private set; } = "";
+        
         [JsonProperty("prefix")]
         [DefaultValue("0")]
-        string prefix_name = "0";
+        public string PrefixName { get; private set; } = "0";
+        
         [JsonProperty("stack")]
         [DefaultValue(1)]
-        public int stack = 1;
+        public int Stack { get; private set; } = 1;
+
         private bool need_parse = true;
 
         [JsonIgnore]
-        public int item_id { get; private set; }
+        public int ItemID { get; private set; }
         [JsonIgnore]
-        public int prefix { get; private set; }
+        public int Prefix { get; private set; }
 
         public void Parse()
         {
@@ -33,35 +35,36 @@ namespace TeamPointPvP
             if (!need_parse) return;
             //Item_IDから先に、全ての名前と衝突させる．数値ならそのまま使う．
             int id;
-            if (Int32.TryParse(item_name, out id))
+            if (Int32.TryParse(ItemName, out id))
             {
-                item_id = id;
+                ItemID = id;
             }
             else
             {
                 var found_item = new List<Item>();
-                if (item_name == "")
+                if (string.IsNullOrEmpty(ItemName))
                 {
-                    item_id = 0;
+                    ItemID = 0;
                 }
                 else
                 {
                     Item item = new Item();
-                    //小文字で比較する．
-                    string nameLower = item_name.ToLowerInvariant();
+                    //大文字に正規化してから比較する．
+                    string upperName = ItemName.ToUpperInvariant();
 
                     Main.player[Main.myPlayer] = new Player();
                     for (int i = 1; i < Main.maxItemTypes; i++)
                     {
                         item.netDefaults(i);
-                        if (!String.IsNullOrWhiteSpace(item.Name))
+                        if (!string.IsNullOrWhiteSpace(item.Name))
                         {
-                            if (item.Name.ToLowerInvariant() == nameLower)
+                            if (item.Name.ToUpperInvariant() == upperName)
                             {
                                 found_item = new List<Item> { item };
                                 break;
                             }
-                            if (item.Name.ToLowerInvariant().StartsWith(nameLower)) //アイテムが一意に定まるならいいようにしてるけどしない方がいいかも．
+                            //アイテムが一意に定まるならいいようにしてるけどしない方がいいかも．
+                            if (item.Name.ToUpperInvariant().StartsWith(upperName, StringComparison.InvariantCultureIgnoreCase))
                             {
                                 found_item.Add(item.Clone());
                             }
@@ -69,20 +72,20 @@ namespace TeamPointPvP
                     }
                     if (found_item.Count == 1)
                     {
-                        item_id = found_item[0].type;
+                        ItemID = found_item[0].type;
                     }
                     else
                     {
-                        throw new Exception("Value Error, Item Name: " + item_name);
+                        throw new Exception("Value Error, Item Name: " + ItemName);
                     }
                 }
             }
 
             //prefixも大体同じ．
             id = 0;
-            if (Int32.TryParse(prefix_name, out id))
+            if (Int32.TryParse(PrefixName, out id))
             {
-                prefix = id;
+                Prefix = id;
             }
             else
             {
@@ -90,32 +93,32 @@ namespace TeamPointPvP
                 const int LAST_ITEM_PREFIX = 83;
 
                 Item item = new Item();
-                if (prefix_name == "")
+                if (string.IsNullOrEmpty(PrefixName))
                 {
-                    prefix = 0;
+                    Prefix = 0;
                 }
                 else
                 {
                     item.SetDefaults(0);
-                    string lowerName = prefix_name.ToLowerInvariant();
+                    string upperName = PrefixName.ToUpperInvariant();
                     var found_prefix = new List<int>();
                     for (int i = FIRST_ITEM_PREFIX; i <= LAST_ITEM_PREFIX; i++)
                     {
                         item.prefix = (byte)i;
-                        string prefixName = item.AffixName().Trim().ToLowerInvariant();
-                        if (prefixName == lowerName)
+                        string prefixName = item.AffixName().Trim().ToUpperInvariant();
+                        if (prefixName == upperName)
                         {
                             found_prefix = new List<int>() { i };
                             break;
                         }
-                        else if (prefixName.StartsWith(lowerName) == true)
+                        else if (prefixName.StartsWith(upperName, StringComparison.InvariantCultureIgnoreCase) == true)
                         {
                             found_prefix.Add(i);
                         }
                     }
                     if (found_prefix.Count == 1)
                     {
-                        prefix = found_prefix[0];
+                        Prefix = found_prefix[0];
                     }
                 }
             }
@@ -126,20 +129,20 @@ namespace TeamPointPvP
     public class ArmorData : ItemData
     {
         [JsonProperty("armor_slot")]
-        string slot = "";
+        private string slot = "";
 
         [JsonIgnore]
-        public int slot_id
+        public int SlotID
         {
             get
             {
-                switch (slot.ToLowerInvariant())
+                switch (slot.ToUpperInvariant())
                 {
-                    case "head":
+                    case "HEAD":
                         return 0;
-                    case "body":
+                    case "BODY":
                         return 1;
-                    case "leg":
+                    case "LEG":
                         return 2;
                     default:
                         return -1;
@@ -154,21 +157,21 @@ namespace TeamPointPvP
         string slot = "";
 
         [JsonIgnore]
-        public int slot_id
+        public int SlotID
         {
             get
             {
-                switch (slot.ToLowerInvariant())
+                switch (slot.ToUpperInvariant())
                 {
-                    case "pet":
+                    case "PET":
                         return 0;
-                    case "light_pet":
+                    case "LIGHT_PET":
                         return 1;
-                    case "minecart":
+                    case "MINECART":
                         return 2;
-                    case "mount":
+                    case "MOUNT":
                         return 3;
-                    case "hook":
+                    case "HOOK":
                         return 4;
                     default:
                         return -1;
@@ -183,7 +186,7 @@ namespace TeamPointPvP
         static List<string> buff_names = new List<string>();
 
         [JsonProperty("buff_name")]
-        public string buff_name;
+        public string BuffName { get; private set; }
         private bool need_parse = true;
 
         [JsonIgnore]
@@ -193,7 +196,7 @@ namespace TeamPointPvP
         {
             if (!need_parse) return;
             int id_;
-            if(Int32.TryParse(buff_name, out id_))
+            if(Int32.TryParse(BuffName, out id_))
             {
                 id = id_;
             }
@@ -212,7 +215,7 @@ namespace TeamPointPvP
                 //永夢「僕が……クソプログラマー……？」　ｯﾍｰｲ(煽り)
                 //
                 //BuffIDがあるのにBuffクラスがないってマジ？？？？？
-                //
+                
                 if (need_load)
                 {
                     buff_names = new List<string>();
@@ -220,7 +223,7 @@ namespace TeamPointPvP
                     FieldInfo[] fields = type.GetFields();
                     foreach (FieldInfo field in fields)
                     {
-                        buff_names.Add(field.Name.ToLowerInvariant());
+                        buff_names.Add(field.Name.ToUpperInvariant());
                     }
 
                     need_load = false;
@@ -228,17 +231,11 @@ namespace TeamPointPvP
                 int count = buff_names.Count;
                 for (int i = 0; i < count; i++)
                 {
-                    if (buff_names[i] == buff_name.ToLowerInvariant())
+                    if (buff_names[i] == BuffName.ToUpperInvariant())
                     {
                         id = i + 1;
                         break;
                     }
-                }
-                
-                //if (id == 0)
-                {
-                    //Console.WriteLine(buff_name.ToLowerInvariant());
-                    //Console.WriteLine(String.Join(",", buff_names));
                 }
             }
 
@@ -249,45 +246,64 @@ namespace TeamPointPvP
     public class PvPClass
     {
         [JsonProperty("id")]
-        public int id;
+        public int Id { get; private set; }
+
         [JsonProperty("class_name")]
-        public string name = "";
+        public string Name
+        {
+            get { return name; }
+            private set { name = value.ToUpperInvariant(); }
+        }
+        private string name;
+        
         [JsonProperty("team")]
         [DefaultValue("all")]
-        string team = "all";
+        private string team = "all";
+        
         private bool need_parse = true;
+        
         [JsonIgnore]
-        public List<int> team_id { get; private set; }
+        public List<int> TeamID { get; private set; }
 
         [JsonProperty("items")]
-        public List<ItemData> items = new List<ItemData>();
+        public List<ItemData> Items { get; private set; } = new List<ItemData>();
+
         [JsonProperty("ammos")]
-        public List<ItemData> ammos = new List<ItemData>();
+        public List<ItemData> Ammos { get; private set; } = new List<ItemData>();
         [JsonProperty("armor")]
-        public List<ArmorData> armors = new List<ArmorData>();
+        public List<ArmorData> Armors { get; private set; } = new List<ArmorData>();
+
         [JsonProperty("accessory")]
-        public List<ItemData> accessorys = new List<ItemData>();
+        public List<ItemData> Accessorys { get; private set; } = new List<ItemData>();
+
         [JsonProperty("vanity_armor")]
-        public List<ArmorData> vanity_armor = new List<ArmorData>();
+        public List<ArmorData> VanityArmors { get; private set; } = new List<ArmorData>();
+
         [JsonProperty("vanity_accessory")]
-        public List<ItemData> vanity_accessorys = new List<ItemData>();
+        public List<ItemData> VanityAccessorys { get; private set; } = new List<ItemData>();
 
         [JsonProperty("buffs")]
-        public List<BuffData> buffs;
+        public List<BuffData> Buffs { get; private set; } = new List<BuffData>();
+
         [JsonProperty("armor_dye")]
-        public List<ArmorData> armor_dyes = new List<ArmorData>();
+        public List<ArmorData> ArmorDyes { get; private set; } = new List<ArmorData>();
+
         [JsonProperty("accessory_dye")]
-        public List<ItemData> accessory_dyes = new List<ItemData>();
+        public List<ItemData> AccessoryDyes { get; private set; } = new List<ItemData>();
+
         [JsonProperty("misc_items")]
-        public List<MiscData> misc_items = new List<MiscData>();
+        public List<MiscData> MiscItems { get; private set; } = new List<MiscData>();
+
         [JsonProperty("misc_dye")]
-        public List<MiscData> misc_dyes = new List<MiscData>();
+        public List<MiscData> MiscDyes { get; private set; } = new List<MiscData>();
+
         [JsonProperty("max_hp")]
         [DefaultValue(100)]
-        public int hp = 100;
+        public int Hp { get; private set; }
+
         [JsonProperty("max_mp")]
         [DefaultValue(20)]
-        public int mp = 20;
+        public int Mp { get; private set; }
 
         public void Parse()
         {
@@ -299,28 +315,28 @@ namespace TeamPointPvP
             foreach (string team_ in teams)
             {
                 int id;
-                switch (team_.Trim().ToLowerInvariant())
+                switch (team_.Trim().ToUpperInvariant())
                 {
-                    case "all":
-                        team_id = new List<int>() { 0, 1, 2, 3, 4, 5 };
+                    case "ALL":
+                        TeamID = new List<int>() { 0, 1, 2, 3, 4, 5 };
                         need_parse = false;
                         return;
-                    case "white":
+                    case "WHITE":
                         id = 0;
                         break;
-                    case "red":
+                    case "RED":
                         id = 1;
                         break;
-                    case "green":
+                    case "GREEN":
                         id = 2;
                         break;
-                    case "blue":
+                    case "BLUE":
                         id = 3;
                         break;
-                    case "yellow":
+                    case "YELLOW":
                         id = 4;
                         break;
-                    case "pink":
+                    case "PINK":
                         id = 5;
                         break;
                     default:
@@ -330,7 +346,7 @@ namespace TeamPointPvP
                 list.Add(id);
             }
 
-            team_id = list;
+            TeamID = list;
             need_parse = false;
         }
     }
