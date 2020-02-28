@@ -34,8 +34,7 @@ namespace TeamPointPvP
             //密結合だが、他に使う予定がない．
             if (!need_parse) return;
             //Item_IDから先に、全ての名前と衝突させる．数値ならそのまま使う．
-            int id;
-            if (Int32.TryParse(ItemName, out id))
+            if (Int32.TryParse(ItemName, out int id))
             {
                 ItemID = id;
             }
@@ -76,7 +75,7 @@ namespace TeamPointPvP
                     }
                     else
                     {
-                        throw new Exception("Value Error, Item Name: " + ItemName);
+                        throw new ArgumentException("Value Error, Item Name: " + ItemName);
                     }
                 }
             }

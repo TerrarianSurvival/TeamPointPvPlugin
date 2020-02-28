@@ -82,7 +82,9 @@
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="PvPClass.cs" />
+    <Compile Include="PvPCommand.cs" />
     <Compile Include="PvPConfig.cs" />
+    <Compile Include="PvPHooks.cs" />
     <Compile Include="PvPMain.cs" />
   </ItemGroup>
   <ItemGroup>

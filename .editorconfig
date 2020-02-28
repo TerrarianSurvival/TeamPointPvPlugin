@@ -2,3 +2,6 @@
 
 # CA1303: ローカライズされるパラメーターとしてリテラルを渡さない
 dotnet_diagnostic.CA1303.severity = none
+
+# CA1812: PvPMap は、インスタンス化されていない内部クラスです。その場合、コードをアセンブリから削除してください。このクラスが静的メンバーのみを含むことを意図している場合は、このクラスを static (Visual Basic の場合は Shared) にしてください。
+dotnet_diagnostic.CA1812.severity = none

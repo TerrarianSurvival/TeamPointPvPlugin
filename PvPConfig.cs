@@ -36,7 +36,6 @@ namespace TeamPointPvP
             using (var sr = new StreamReader(stream))
             {
                 return JsonConvert.DeserializeObject<PvPConfig>(sr.ReadToEnd());
-                
             }
         }
 
